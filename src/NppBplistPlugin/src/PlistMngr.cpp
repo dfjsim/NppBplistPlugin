@@ -15,7 +15,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include <unordered_map>
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -92,15 +91,15 @@ namespace
   }
 
   // Convert date nodes to real nodes in-place (for numeric date display)
-  // Returns a map of node pointers to their original date values for later restoration
-  std::unordered_map<plist_t, std::pair<int32_t, int32_t>> ConvertDatesToReal(plist_t node)
+  // Returns a list of numeric timestamp values for identifying them in XML
+  std::vector<double> ConvertDatesToReal(plist_t node)
   {
-    std::unordered_map<plist_t, std::pair<int32_t, int32_t>> dateMap;
+    std::vector<double> timestampValues;
     
     if (!node)
     {
       LOG_WARNING("ConvertDatesToReal called with null node");
-      return dateMap;
+      return timestampValues;
     }
 
     const plist_type type = plist_get_node_type(node);
@@ -115,7 +114,7 @@ namespace
         if (child)
         {
           auto childDates = ConvertDatesToReal(child);
-          dateMap.insert(childDates.begin(), childDates.end());
+          timestampValues.insert(timestampValues.end(), childDates.begin(), childDates.end());
         }
       }
       break;
@@ -135,7 +134,7 @@ namespace
           if (value)
           {
             auto childDates = ConvertDatesToReal(value);
-            dateMap.insert(childDates.begin(), childDates.end());
+            timestampValues.insert(timestampValues.end(), childDates.begin(), childDates.end());
           }
           plist_dict_next_item(node, iter, &key, &value);
         }
@@ -149,11 +148,12 @@ namespace
       int32_t usec = 0;
       plist_get_date_val(node, &sec, &usec);
       
-      // Store the original date value
-      dateMap[node] = std::make_pair(sec, usec);
-      
       // Convert to numeric CFAbsoluteTime and replace with real node
       const double cfValue = static_cast<double>(sec) + static_cast<double>(usec) / kOneMillion;
+      
+      // Store this timestamp value so we can identify it in the XML later
+      timestampValues.push_back(cfValue);
+      
       plist_set_real_val(node, cfValue);
       break;
     }
@@ -161,16 +161,93 @@ namespace
       break;
     }
     
-    return dateMap;
+    return timestampValues;
   }
 
-  // Restore date nodes from real nodes
-  void RestoreDatesFromReal(const std::unordered_map<plist_t, std::pair<int32_t, int32_t>>& dateMap)
+  // Post-process XML to replace <real> tags with <timestamp> tags for numeric dates
+  std::string ReplaceRealTagsWithTimestamp(const std::string& xml, const std::vector<double>& timestampValues)
   {
-    for (const auto& entry : dateMap)
+    if (timestampValues.empty())
+      return xml;
+    
+    std::string result;
+    result.reserve(xml.size());
+    
+    std::vector<bool> consumed(timestampValues.size(), false);
+    constexpr double kEpsilon = 1e-6;
+    
+    size_t pos = 0;
+    while (true)
     {
-      plist_set_date_val(entry.first, entry.second.first, entry.second.second);
+      size_t tagStart = xml.find("<real>", pos);
+      if (tagStart == std::string::npos)
+      {
+        result.append(xml, pos, std::string::npos);
+        break;
+      }
+      
+      result.append(xml, pos, tagStart - pos);
+      
+      size_t valueStart = tagStart + 6; // strlen("<real>")
+      size_t tagEnd = xml.find("</real>", valueStart);
+      if (tagEnd == std::string::npos)
+      {
+        // Malformed XML, append rest and exit
+        result.append(xml, tagStart, std::string::npos);
+        break;
+      }
+      
+      std::string valueSegment = xml.substr(valueStart, tagEnd - valueStart);
+      double candidate = std::strtod(valueSegment.c_str(), nullptr);
+      
+      bool replaced = false;
+      for (size_t i = 0; i < timestampValues.size(); ++i)
+      {
+        if (consumed[i])
+          continue;
+        if (std::fabs(timestampValues[i] - candidate) <= kEpsilon)
+        {
+          consumed[i] = true;
+          result.append("<timestamp>");
+          result.append(valueSegment);
+          result.append("</timestamp>");
+          replaced = true;
+          break;
+        }
+      }
+      
+      if (!replaced)
+      {
+        result.append(xml, tagStart, (tagEnd + 7) - tagStart);
+      }
+      
+      pos = tagEnd + 7; // move past </real>
     }
+    
+    return result;
+  }
+
+  // Convert timestamp nodes back to real nodes (when reading XML with <timestamp> tags)
+  std::string ReplaceTimestampTagsWithReal(const std::string& xml)
+  {
+    std::string result = xml;
+    
+    // Replace all <timestamp> tags with <real> tags so libplist can parse them
+    size_t pos = 0;
+    while ((pos = result.find("<timestamp>", pos)) != std::string::npos)
+    {
+      result.replace(pos, 11, "<real>");
+      pos += 6;
+    }
+    
+    pos = 0;
+    while ((pos = result.find("</timestamp>", pos)) != std::string::npos)
+    {
+      result.replace(pos, 12, "</real>");
+      pos += 7;
+    }
+    
+    return result;
   }
 
   // Convert real nodes back to date nodes where they represent numeric CFAbsoluteTime values
@@ -404,13 +481,13 @@ namespace bplist
     }
 
     // If numeric dates are enabled, convert date nodes to real nodes before XML serialization
-    // This avoids libplist generating ISO 8601 strings that we'd have to replace
-    std::unordered_map<plist_t, std::pair<int32_t, int32_t>> dateMap;
+    // We'll post-process the XML to replace <real> tags with <timestamp> tags
+    std::vector<double> timestampValues;
     if (keepDatesNumeric)
     {
       LOG_DEBUG("Converting date nodes to real nodes");
-      dateMap = ConvertDatesToReal(plist.get());
-    LOG_DEBUG("Converted ", dateMap.size(), " date nodes");
+      timestampValues = ConvertDatesToReal(plist.get());
+    LOG_DEBUG("Converted ", timestampValues.size(), " date nodes");
     }
 
     uint32_t cbXML = 0;
@@ -457,18 +534,21 @@ namespace bplist
         "Your file has NOT been modified.");
     }
 
-    // Restore date nodes if we converted them
-    if (keepDatesNumeric && !dateMap.empty())
-    {
-      LOG_DEBUG("Restoring date nodes from real nodes");
-      RestoreDatesFromReal(dateMap);
-    }
-
     if ( cbXML > 0 )
     {
       xmlBuff_.assign( pXML_, pXML_ + cbXML );
       // free mem allocated by plist_to_xml
       free( pXML_ );
+      
+      // Post-process XML to replace <real> tags with <timestamp> tags for numeric dates
+      if (keepDatesNumeric && !timestampValues.empty())
+      {
+        LOG_DEBUG("Post-processing XML to replace <real> tags with <timestamp> tags");
+        std::string xmlStr(xmlBuff_.begin(), xmlBuff_.end());
+        xmlStr = ReplaceRealTagsWithTimestamp(xmlStr, timestampValues);
+        xmlBuff_.assign(xmlStr.begin(), xmlStr.end());
+        LOG_DEBUG("Replaced ", timestampValues.size(), " <real> tags with <timestamp> tags");
+      }
     }
 
     if ( xmlBuff_.empty() )
@@ -490,6 +570,14 @@ namespace bplist
     
     GuardedPlist plist;
     std::string xmlString(xmlBuff.begin(), xmlBuff.end());
+
+    // If numeric dates mode is enabled, convert <timestamp> tags back to <real> tags
+    // so libplist can parse them
+    if (GetKeepDatesNumeric())
+    {
+      LOG_DEBUG("Converting <timestamp> tags to <real> tags for parsing");
+      xmlString = ReplaceTimestampTagsWithReal(xmlString);
+    }
 
     // Parse the XML (which may contain numeric date values as real nodes)
     LOG_DEBUG("Calling plist_from_xml");

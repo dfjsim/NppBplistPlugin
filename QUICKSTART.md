@@ -21,14 +21,14 @@
 ### Option 1: View Timestamps in Numeric Format
 
 1. Open Notepad++
-2. Go to menu: **Plugins → Notepad++ bplist plugin → Keep timestamps numeric**
+2. Go to menu: **Plugins → Notepad++ bplist plugin (js fork) → Keep timestamps numeric**
 3. Check that a checkmark appears next to the menu item
 4. Open any binary plist file (`.plist` files from iOS devices)
 5. Look for `<date>` tags - they will show numeric values like: `755347200.5`
 
 ### Option 2: View Timestamps in Human-Readable Format (Default)
 
-1. Go to menu: **Plugins → Notepad++ bplist plugin → Keep timestamps numeric**
+1. Go to menu: **Plugins → Notepad++ bplist plugin (js fork) → Keep timestamps numeric**
 2. Uncheck the menu item (remove checkmark)
 3. Open any binary plist file
 4. Look for `<date>` tags - they will show ISO 8601 dates like: `2024-12-15T08:00:00.5Z`

@@ -15,7 +15,7 @@
    - Example: `2024-12-15T08:00:00.5Z`
 
 ### Test 2: Enable Numeric Timestamps
-1. Go to menu: `Plugins → Notepad++ bplist plugin → Keep timestamps numeric`
+1. Go to menu: `Plugins → Notepad++ bplist plugin (js fork) → Keep timestamps numeric`
 2. Click to enable (checkmark should appear)
 3. You should see a message confirming the change
 4. Close and reopen the bplist file
@@ -30,7 +30,7 @@
 4. Verify the changed value persists
 
 ### Test 4: Toggle Back to ISO Format
-1. Go to menu: `Plugins → Notepad++ bplist plugin → Keep timestamps numeric`
+1. Go to menu: `Plugins → Notepad++ bplist plugin (js fork) → Keep timestamps numeric`
 2. Click to disable (checkmark should disappear)
 3. Close and reopen the bplist file
 4. Verify timestamps are back in ISO 8601 format

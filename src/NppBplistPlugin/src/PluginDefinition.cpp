@@ -120,7 +120,7 @@ void commandMenuInit() noexcept
     toggleKey._key = 'D';
 
     setCommand( 0, TEXT("Is currently opened file a bplist file?"), IsItABplistFileHandler, NULL, false );
-    setCommand( 1, TEXT("Keep timestamps numeric (Ctrl+Alt+D)"), ToggleKeepDatesNumericHandler, &toggleKey, bplist::GetKeepDatesNumeric() );
+    setCommand( 1, TEXT("Keep timestamps numeric"), ToggleKeepDatesNumericHandler, &toggleKey, bplist::GetKeepDatesNumeric() );
     setCommand( 2, TEXT("-"), nullptr, NULL, false);
     setCommand( 3, TEXT("About"), helloDlg, NULL, false);
 }
@@ -160,7 +160,7 @@ void helloDlg() noexcept
 {
   ::MessageBox(NULL
   , TEXT("Just open bplist file with Notepad++ and use it as ordinary text file.")
-  , TEXT("Notepad++ plist plugin")
+  , TEXT("Notepad++ plist plugin (js fork)")
   , MB_OK);
 }
 
@@ -171,7 +171,7 @@ void IsItABplistFileHandler() noexcept
 
   ::MessageBoxW(NULL
     , msg.c_str()
-    , L"Notepad++ plist plugin"
+    , L"Notepad++ plist plugin (js fork)"
     , MB_OK);
 }
 

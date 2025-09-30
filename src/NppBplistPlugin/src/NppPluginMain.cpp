@@ -109,28 +109,28 @@ extern "C" __declspec(dllexport) void beNotified(SCNotification *notifyCode)
     std::string errorMsg = std::string("Fatal system error: ") + err.what() + " (code: " + std::to_string(err.code().value()) + ")";
     LOG_ERROR(errorMsg);
     bplist::Logger::GetInstance().Flush();
-    ::MessageBoxA(NULL, errorMsg.c_str(), "Notepad++ bplist plugin fatal error", MB_ICONERROR);
+  ::MessageBoxA(NULL, errorMsg.c_str(), "Notepad++ bplist plugin (js fork) fatal error", MB_ICONERROR);
   }
   catch (std::runtime_error& err)
   {
     std::string errorMsg = std::string("Runtime error: ") + err.what();
     LOG_ERROR(errorMsg);
     bplist::Logger::GetInstance().Flush();
-    ::MessageBoxA(NULL, errorMsg.c_str(), "Notepad++ bplist plugin error", MB_ICONERROR);
+  ::MessageBoxA(NULL, errorMsg.c_str(), "Notepad++ bplist plugin (js fork) error", MB_ICONERROR);
   }
   catch (std::exception& err)
   {
     std::string errorMsg = std::string("Unexpected exception: ") + err.what();
     LOG_ERROR(errorMsg);
     bplist::Logger::GetInstance().Flush();
-    ::MessageBoxA(NULL, errorMsg.c_str(), "Notepad++ bplist plugin unexpected error", MB_ICONERROR);
+  ::MessageBoxA(NULL, errorMsg.c_str(), "Notepad++ bplist plugin (js fork) unexpected error", MB_ICONERROR);
   }
   catch (...)
   {
     std::string errorMsg = "Unknown exception occurred (possibly SEH/access violation)";
     LOG_ERROR(errorMsg);
     bplist::Logger::GetInstance().Flush();
-    ::MessageBoxA(NULL, errorMsg.c_str(), "Notepad++ bplist plugin critical error", MB_ICONERROR);
+  ::MessageBoxA(NULL, errorMsg.c_str(), "Notepad++ bplist plugin (js fork) critical error", MB_ICONERROR);
   }
 }
 

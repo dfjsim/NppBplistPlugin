@@ -69,13 +69,13 @@ for (each "<date>2024-01-01T00:00:00Z</date>") {
 **New Approach (Node Manipulation):**
 ```cpp
 // Step 1: Temporarily change node types
-auto dateMap = ConvertDatesToReal(plist);  // DATE→REAL
+auto timestampValues = ConvertDatesToReal(plist);  // DATE→REAL + capture doubles
 
 // Step 2: Generate XML (already has numeric values!)
 plist_to_xml(plist, &xml, &len);
 
-// Step 3: Restore original types
-RestoreDatesFromReal(dateMap);  // REAL→DATE
+// Step 3: Post-process XML
+xml = ReplaceRealTagsWithTimestamp(xml, timestampValues);  // REAL tags → <timestamp>
 ```
 
 ### Technical Details

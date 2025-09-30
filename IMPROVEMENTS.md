@@ -62,7 +62,7 @@ This document describes the improvements made to fix crashes and enhance usabili
 
 ### 5. Menu Improvements 📋
 **Changes:**
-- Menu item shows keyboard shortcut: "Keep timestamps numeric (Ctrl+Alt+D)"
+- Menu item label simplified to "Keep timestamps numeric" (shortcut still assigned)
 - Checkmark indicates current state
 - More informative status messages
 
@@ -110,7 +110,7 @@ Copy-Item "bin\RelWithDebInfo\plist-2.0.dll" "C:\Program Files\Notepad++\plugins
 
 ### Using Date Format Toggle
 1. **With Keyboard:** Press `Ctrl+Alt+D` to toggle
-2. **With Menu:** Plugins → NppBplistPlugin → Keep timestamps numeric (Ctrl+Alt+D)
+2. **With Menu:** Plugins → Notepad++ bplist plugin (js fork) → Keep timestamps numeric
 3. File automatically reloads with new format if it's a bplist
 
 ### Viewing Debug Logs
