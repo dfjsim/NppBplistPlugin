@@ -17,6 +17,7 @@
 
 #include "PluginDefinition.h"
 #include "BplistMngr.h"
+#include "Logger.h"
 #include <system_error>
 
 extern FuncItem funcItem[nbFunc];
@@ -72,18 +73,23 @@ extern "C" __declspec(dllexport) void beNotified(SCNotification *notifyCode)
     switch ( notifyCode->nmhdr.code )
     {
       case NPPN_SHUTDOWN:
+        LOG_INFO("NPPN_SHUTDOWN received");
         commandMenuCleanUp();
         break;
       case NPPN_BUFFERACTIVATED:
+        LOG_DEBUG("NPPN_BUFFERACTIVATED received");
         bplist::OnBufferActivated(notifyCode);
         break;
       case NPPN_FILEBEFORESAVE:
+        LOG_DEBUG("NPPN_FILEBEFORESAVE received");
         bplist::OnFileBeforeSave(notifyCode);
         break;
       case NPPN_FILESAVED:
+        LOG_DEBUG("NPPN_FILESAVED received");
         bplist::OnFileSaved(notifyCode);
         break;
       case NPPN_FILECLOSED:
+        LOG_DEBUG("NPPN_FILECLOSED received");
         bplist::OnFileClosed(notifyCode);
         break;
       default:
@@ -92,16 +98,39 @@ extern "C" __declspec(dllexport) void beNotified(SCNotification *notifyCode)
   }
   catch (std::bad_alloc& err)
   {
-    ::MessageBoxA(NULL, err.what(), "Notepad++ bplist bad allocation", MB_ICONERROR);
+    std::string errorMsg = std::string("Memory allocation failed: ") + err.what();
+    LOG_ERROR(errorMsg);
+    bplist::Logger::GetInstance().Flush();
+    ::MessageBoxA(NULL, errorMsg.c_str(), "Notepad++ bplist bad allocation", MB_ICONERROR);
   }
   catch (std::system_error& err)
   {
     fatalErrorOccurred = true;
-    ::MessageBoxA(NULL, err.what(), "Notepad++ bplist plugin fatal error", MB_ICONERROR);
+    std::string errorMsg = std::string("Fatal system error: ") + err.what() + " (code: " + std::to_string(err.code().value()) + ")";
+    LOG_ERROR(errorMsg);
+    bplist::Logger::GetInstance().Flush();
+    ::MessageBoxA(NULL, errorMsg.c_str(), "Notepad++ bplist plugin fatal error", MB_ICONERROR);
   }
   catch (std::runtime_error& err)
   {
-    ::MessageBoxA(NULL, err.what(), "Notepad++ bplist plugin error", MB_ICONERROR);
+    std::string errorMsg = std::string("Runtime error: ") + err.what();
+    LOG_ERROR(errorMsg);
+    bplist::Logger::GetInstance().Flush();
+    ::MessageBoxA(NULL, errorMsg.c_str(), "Notepad++ bplist plugin error", MB_ICONERROR);
+  }
+  catch (std::exception& err)
+  {
+    std::string errorMsg = std::string("Unexpected exception: ") + err.what();
+    LOG_ERROR(errorMsg);
+    bplist::Logger::GetInstance().Flush();
+    ::MessageBoxA(NULL, errorMsg.c_str(), "Notepad++ bplist plugin unexpected error", MB_ICONERROR);
+  }
+  catch (...)
+  {
+    std::string errorMsg = "Unknown exception occurred (possibly SEH/access violation)";
+    LOG_ERROR(errorMsg);
+    bplist::Logger::GetInstance().Flush();
+    ::MessageBoxA(NULL, errorMsg.c_str(), "Notepad++ bplist plugin critical error", MB_ICONERROR);
   }
 }
 

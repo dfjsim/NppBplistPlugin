@@ -17,6 +17,7 @@ namespace bplist
   void OnFileClosed( SCNotification *notifyCode );
 
   bool IsCurrentFileIsABplistFile();
+  void ReloadCurrentBplistFile();
 } // namespace bplist
 
 

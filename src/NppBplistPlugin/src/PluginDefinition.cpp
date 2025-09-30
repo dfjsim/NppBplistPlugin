@@ -19,6 +19,8 @@
 #include "menuCmdID.h"
 #include "BplistMngr.h"
 #include "AboutWnd.h"
+#include "PlistMngr.h"
+#include "Logger.h"
 
 #include <Windows.h>
 #include <stdexcept>
@@ -39,6 +41,40 @@ NppData nppData;
 // It will be called while plugin loading
 BOOL pluginInit( HANDLE hModule ) noexcept
 {
+  // Get plugin config directory
+  wchar_t configDir[MAX_PATH] = {};
+  ::SendMessage(nppData._nppHandle, NPPM_GETPLUGINSCONFIGDIR, MAX_PATH, (LPARAM)configDir);
+  
+#ifdef _DEBUG
+  // Initialize logger to %TEMP% directory (Debug builds only)
+  wchar_t tempPath[MAX_PATH] = {};
+  ::GetTempPathW(MAX_PATH, tempPath);
+  std::wstring logPath = tempPath;
+  
+  // Add timestamp to log filename for easier debugging
+  SYSTEMTIME st;
+  ::GetLocalTime(&st);
+  wchar_t timestamp[64];
+  swprintf_s(timestamp, L"NppBplistPlugin_%04d%02d%02d_%02d%02d%02d.log", 
+             st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+  
+  logPath += timestamp;
+  
+  bplist::Logger::GetInstance().Initialize(logPath);
+  bplist::Logger::GetInstance().Info("Plugin initialization started (Debug build)");
+  bplist::Logger::GetInstance().Info(std::wstring(L"Log file: ") + logPath);
+#endif
+  
+  // Initialize config path for settings persistence
+  bplist::InitializeConfigPath(configDir);
+  
+  // Load saved settings
+  bplist::LoadSettings();
+  
+#ifdef _DEBUG
+  bplist::Logger::GetInstance().Info("Plugin initialization completed successfully");
+#endif
+  
   return bplist::InitPlugin();
 }
 
@@ -47,7 +83,14 @@ BOOL pluginInit( HANDLE hModule ) noexcept
 //
 void pluginCleanUp() noexcept
 {
+#ifdef _DEBUG
+  bplist::Logger::GetInstance().Info("Plugin cleanup started");
+#endif
   bplist::FreePlugin();
+#ifdef _DEBUG
+  bplist::Logger::GetInstance().Info("Plugin cleanup completed");
+  bplist::Logger::GetInstance().Flush();
+#endif
 }
 
 //
@@ -69,9 +112,17 @@ void commandMenuInit() noexcept
     //setCommand(0, TEXT("Hello Notepad++"), hello, NULL, false);
     //setCommand(1, TEXT("About"), helloDlg, NULL, false);
 
+    // Set up keyboard shortcut for toggle: Ctrl+Alt+D
+    ShortcutKey toggleKey = {};
+    toggleKey._isCtrl = true;
+    toggleKey._isAlt = true;
+    toggleKey._isShift = false;
+    toggleKey._key = 'D';
+
     setCommand( 0, TEXT("Is currently opened file a bplist file?"), IsItABplistFileHandler, NULL, false );
-    setCommand( 1, TEXT("-"), nullptr, NULL, false);
-    setCommand( 2, TEXT("About"), helloDlg, NULL, false);
+    setCommand( 1, TEXT("Keep timestamps numeric (Ctrl+Alt+D)"), ToggleKeepDatesNumericHandler, &toggleKey, bplist::GetKeepDatesNumeric() );
+    setCommand( 2, TEXT("-"), nullptr, NULL, false);
+    setCommand( 3, TEXT("About"), helloDlg, NULL, false);
 }
 
 //
@@ -122,4 +173,39 @@ void IsItABplistFileHandler() noexcept
     , msg.c_str()
     , L"Notepad++ plist plugin"
     , MB_OK);
+}
+
+void ToggleKeepDatesNumericHandler() noexcept
+{
+  const bool newState = bplist::ToggleKeepDatesNumeric();
+  
+  // Update the menu check mark
+  ::SendMessage(nppData._nppHandle, 
+    NPPM_SETMENUITEMCHECK, 
+    funcItem[1]._cmdID, 
+    (LPARAM)newState);
+  
+  // If the current file is a bplist, reload it automatically
+  if (bplist::IsCurrentFileIsABplistFile())
+  {
+    bplist::ReloadCurrentBplistFile();
+    
+    std::wstring msg = newState
+      ? L"Timestamps are now displayed in numeric format (CFAbsoluteTime)."
+      : L"Timestamps are now displayed in human-readable format (ISO 8601).";
+    
+    // Show brief notification in status bar instead of dialog
+    ::SendMessageW(nppData._nppHandle, NPPM_SETSTATUSBAR, STATUSBAR_DOC_TYPE, (LPARAM)msg.c_str());
+  }
+  else
+  {
+    std::wstring msg = newState
+      ? L"Timestamps will be kept in numeric format (CFAbsoluteTime).\n\nOpen a bplist file to see the change."
+      : L"Timestamps will be converted to human-readable format (ISO 8601).\n\nOpen a bplist file to see the change.";
+    
+    ::MessageBoxW(NULL
+      , msg.c_str()
+      , L"Timestamp Format Changed"
+      , MB_OK | MB_ICONINFORMATION);
+  }
 }

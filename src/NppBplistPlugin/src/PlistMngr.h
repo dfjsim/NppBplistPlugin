@@ -33,6 +33,10 @@ namespace bplist
     {
       return GetBinPlist( std::move( xmlBuff_ ) );
     };
+    
+    // Get the raw binary plist data (for reloading)
+    const CharVt& GetRawPlist() const noexcept { return rawFileBuff_; }
+    
   private:
     ContentType contentType_;
     CharVt rawFileBuff_;
@@ -60,6 +64,14 @@ namespace bplist
   private:
     plist_t plist_;
   };
+
+  // Settings management
+  void SetKeepDatesNumeric(bool enabled) noexcept;
+  bool GetKeepDatesNumeric() noexcept;
+  bool ToggleKeepDatesNumeric() noexcept;
+  void LoadSettings() noexcept;
+  void SaveSettings() noexcept;
+  void InitializeConfigPath(const wchar_t* pluginConfigDir) noexcept;
 
 } // namespace bplist
 

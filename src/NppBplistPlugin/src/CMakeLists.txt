@@ -12,6 +12,11 @@ add_library(NppBplistPlugin SHARED ${SOURCE_FILES} ${HEADER_FILES} ${RC_FILES})
 set_property(TARGET NppBplistPlugin PROPERTY
   MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
+# Enable SEH (Structured Exception Handling) to catch access violations
+if(MSVC)
+  target_compile_options(NppBplistPlugin PRIVATE /EHa)
+endif()
+
 target_include_directories(NppBplistPlugin PUBLIC "${VCPKG_INSTALLED_DIR}/${TARGET_TRIPLET}/include")
 
 find_package(unofficial-libplist CONFIG REQUIRED)

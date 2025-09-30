@@ -36,7 +36,7 @@ const TCHAR NPP_PLUGIN_NAME[] = TEXT("Notepad++ bplist plugin");
 //
 // Here define the number of your plugin commands
 //
-const int nbFunc = 3;
+const int nbFunc = 4;
 
 //
 // Initialization of your plugin data
@@ -71,5 +71,6 @@ bool setCommand(size_t index, const TCHAR *cmdName, PFUNCPLUGINCMD pFunc, Shortc
 //
 void helloDlg() noexcept;
 void IsItABplistFileHandler() noexcept;
+void ToggleKeepDatesNumericHandler() noexcept;
 
 #endif //PLUGINDEFINITION_H
