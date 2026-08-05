@@ -22,7 +22,7 @@ jobs:
 
     steps:
     - name: Checkout repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Restore vcpkg packages
       working-directory: ${{env.GITHUB_WORKSPACE}}
@@ -41,7 +41,7 @@ jobs:
 
     - name: Archive artifacts for ${{ matrix.build_platform }}
       if: matrix.build_configuration == 'RelWithDebInfo'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
           name: plugin_dll_${{ matrix.build_platform }}
           path: bin\${{ matrix.build_configuration }}\NppBplistPlugin.dll
